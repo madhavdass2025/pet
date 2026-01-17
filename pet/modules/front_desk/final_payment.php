@@ -27,7 +27,22 @@ $stmt_lab->bind_param("i", $consult_id);
 $stmt_lab->execute();
 $lab_charges = $stmt_lab->get_result()->fetch_assoc()['total'] ?: 0;
 
-$total_due = $med_charges + $lab_charges;
+$stmt_vacc = $mysqli->prepare("SELECT SUM(fee) as total FROM vaccination_orders WHERE consult_id = ? AND payment_status = 'pending'");
+$stmt_vacc->bind_param("i", $consult_id);
+$stmt_vacc->execute();
+$vacc_charges = $stmt_vacc->get_result()->fetch_assoc()['total'] ?: 0;
+
+$stmt_imag = $mysqli->prepare("SELECT SUM(fee) as total FROM imaging_orders WHERE consult_id = ? AND payment_status = 'pending'");
+$stmt_imag->bind_param("i", $consult_id);
+$stmt_imag->execute();
+$imag_charges = $stmt_imag->get_result()->fetch_assoc()['total'] ?: 0;
+
+$stmt_surg = $mysqli->prepare("SELECT SUM(fee) as total FROM surgery_orders WHERE consult_id = ? AND payment_status = 'pending'");
+$stmt_surg->bind_param("i", $consult_id);
+$stmt_surg->execute();
+$surg_charges = $stmt_surg->get_result()->fetch_assoc()['total'] ?: 0;
+
+$total_due = $med_charges + $lab_charges + $vacc_charges + $imag_charges + $surg_charges;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $mysqli->begin_transaction();
@@ -43,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $receipt_count = $res_receipt->fetch_assoc()['cnt'] + 1;
         $receipt_no = "REC-" . date('Ymd') . "-" . str_pad($receipt_count, 4, '0', STR_PAD_LEFT);
 
-        $stmt_pay = $mysqli->prepare("INSERT INTO payment_transactions (RegNo, consult_id, transaction_date, receipt_no, medicine_charges, lab_charges, subtotal, total_amount, cash_amount, card_amount, upi_amount, credit_amount, paid_amount, balance_amount, collected_by) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_pay = $mysqli->prepare("INSERT INTO payment_transactions (RegNo, consult_id, transaction_date, receipt_no, medicine_charges, lab_charges, vaccination_charges, xray_charges, surgery_charges, subtotal, total_amount, cash_amount, card_amount, upi_amount, credit_amount, paid_amount, balance_amount, collected_by) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $balance = $total_due - $paid_amount;
-        $stmt_pay->bind_param("sisdddddddddddi",
-            $reg_no, $consult_id, $receipt_no, $med_charges, $lab_charges, $total_due, $total_due,
+        $stmt_pay->bind_param("sisddddddddddddddi",
+            $reg_no, $consult_id, $receipt_no, $med_charges, $lab_charges, $vacc_charges, $imag_charges, $surg_charges, $total_due, $total_due,
             $cash, $card, $upi, $credit, $paid_amount, $balance, $_SESSION['user_id']
         );
         $stmt_pay->execute();
@@ -59,10 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt_credit->execute();
         }
 
-        // Update lab orders payment status
-        $stmt_up_lab = $mysqli->prepare("UPDATE lab_orders SET payment_status = 'paid' WHERE consult_id = ?");
-        $stmt_up_lab->bind_param("i", $consult_id);
-        $stmt_up_lab->execute();
+        // Update payment status for all services
+        $mysqli->query("UPDATE lab_orders SET payment_status = 'paid' WHERE consult_id = $consult_id");
+        $mysqli->query("UPDATE vaccination_orders SET payment_status = 'paid' WHERE consult_id = $consult_id");
+        $mysqli->query("UPDATE imaging_orders SET payment_status = 'paid' WHERE consult_id = $consult_id");
+        $mysqli->query("UPDATE surgery_orders SET payment_status = 'paid' WHERE consult_id = $consult_id");
 
         $mysqli->commit();
         echo "<script>alert('Final Payment Successful. Receipt: $receipt_no'); window.location.href='dashboard.php';</script>";
@@ -86,9 +102,12 @@ include '../../includes/header.php';
                 <div class="col-md-6">
                     <h5>Charges Breakdown</h5>
                     <table class="table">
-                        <tr><td>Medicine Charges</td><td><?php echo $med_charges; ?></td></tr>
-                        <tr><td>Lab Charges</td><td><?php echo $lab_charges; ?></td></tr>
-                        <tr class="table-dark"><td>Total Due</td><td><?php echo $total_due; ?></td></tr>
+                        <tr><td>Medicine Charges</td><td><?php echo number_format($med_charges, 2); ?></td></tr>
+                        <tr><td>Lab Charges</td><td><?php echo number_format($lab_charges, 2); ?></td></tr>
+                        <tr><td>Vaccination Charges</td><td><?php echo number_format($vacc_charges, 2); ?></td></tr>
+                        <tr><td>Imaging Charges</td><td><?php echo number_format($imag_charges, 2); ?></td></tr>
+                        <tr><td>Surgery Charges</td><td><?php echo number_format($surg_charges, 2); ?></td></tr>
+                        <tr class="table-dark"><td>Total Due</td><td><?php echo number_format($total_due, 2); ?></td></tr>
                     </table>
                 </div>
                 <div class="col-md-6">

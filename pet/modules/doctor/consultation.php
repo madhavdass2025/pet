@@ -69,18 +69,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_l->execute();
     } elseif ($action == 'add_vaccine_order') {
         $vacc_id = $_POST['vacc_id'];
-        $stmt_v_mast = $mysqli->prepare("SELECT vacc_name, fee_amount FROM vaccination_master v JOIN fee_master f ON f.fee_type = 'vaccination' WHERE v.vacc_id = ? LIMIT 1");
-        // Simplified fee fetching for vaccine
         $stmt_v_mast = $mysqli->prepare("SELECT vacc_name FROM vaccination_master WHERE vacc_id = ?");
         $stmt_v_mast->bind_param("i", $vacc_id);
         $stmt_v_mast->execute();
         $vacc_data = $stmt_v_mast->get_result()->fetch_assoc();
 
-        $fee = 200.00; // Default if not found in fee_master
+        // Fetch fee from fee_master
+        $fee_res = $mysqli->query("SELECT fee_amount FROM fee_master WHERE fee_type = 'vaccination' AND is_active = 1 LIMIT 1");
+        $fee = ($fee_res->num_rows > 0) ? $fee_res->fetch_assoc()['fee_amount'] : 200.00;
 
         $stmt_vo = $mysqli->prepare("INSERT INTO vaccination_orders (consult_id, RegNo, vacc_id, vaccine_name, fee, ordered_by) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt_vo->bind_param("isisdi", $consult_id, $data['RegNo'], $vacc_id, $vacc_data['vacc_name'], $fee, $_SESSION['user_id']);
         $stmt_vo->execute();
+    } elseif ($action == 'add_imaging_order') {
+        $type = $_POST['imaging_type'];
+        $part = $_POST['body_part'];
+        $indication = $_POST['clinical_indication'];
+        $fee = $_POST['fee'] ?: 500.00;
+
+        $stmt_io = $mysqli->prepare("INSERT INTO imaging_orders (consult_id, RegNo, imaging_type, body_part, clinical_indication, fee, ordered_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt_io->bind_param("isssddi", $consult_id, $data['RegNo'], $type, $part, $indication, $fee, $_SESSION['user_id']);
+        $stmt_io->execute();
+    } elseif ($action == 'add_surgery_order') {
+        $name = $_POST['procedure_name'];
+        $date = $_POST['scheduled_date'];
+        $duration = $_POST['estimated_duration'];
+        $anesthesia = isset($_POST['anesthesia_required']) ? 1 : 0;
+        $fee = $_POST['fee'] ?: 1000.00;
+
+        $stmt_so = $mysqli->prepare("INSERT INTO surgery_orders (consult_id, RegNo, procedure_name, scheduled_date, estimated_duration, anesthesia_required, fee, ordered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_so->bind_param("isssiddi", $consult_id, $data['RegNo'], $name, $date, $duration, $anesthesia, $fee, $_SESSION['user_id']);
+        $stmt_so->execute();
     } elseif ($action == 'complete_consultation') {
         $stmt_comp = $mysqli->prepare("UPDATE consultations SET status = 'completed' WHERE consult_id = ?");
         $stmt_comp->bind_param("i", $consult_id);
@@ -113,6 +132,16 @@ $stmt_lo_list = $mysqli->prepare("SELECT * FROM lab_orders WHERE consult_id = ?"
 $stmt_lo_list->bind_param("i", $consult_id);
 $stmt_lo_list->execute();
 $lab_orders = $stmt_lo_list->get_result();
+
+$stmt_io_list = $mysqli->prepare("SELECT * FROM imaging_orders WHERE consult_id = ?");
+$stmt_io_list->bind_param("i", $consult_id);
+$stmt_io_list->execute();
+$imaging_orders = $stmt_io_list->get_result();
+
+$stmt_so_list = $mysqli->prepare("SELECT * FROM surgery_orders WHERE consult_id = ?");
+$stmt_so_list->bind_param("i", $consult_id);
+$stmt_so_list->execute();
+$surgery_orders = $stmt_so_list->get_result();
 
 $stmt_h = $mysqli->prepare("SELECT c.consult_date, d.diagnosis_notes FROM consultations c LEFT JOIN diagnosis d ON c.consult_id = d.consult_id WHERE c.RegNo = ? AND c.consult_id != ? ORDER BY c.consult_date DESC");
 $stmt_h->bind_param("si", $data['RegNo'], $consult_id);
@@ -290,6 +319,57 @@ include '../../includes/header.php';
                         <td><?php echo $vo['vaccine_name']; ?></td>
                         <td><?php echo $vo['administered'] ? 'Administered' : 'Pending'; ?></td>
                         <td><?php echo $vo['fee']; ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+
+        <h5 class="mt-4">Imaging Orders</h5>
+        <form method="POST" class="row g-2 mb-4">
+            <input type="hidden" name="action" value="add_imaging_order">
+            <div class="col-md-3">
+                <select name="imaging_type" class="form-select" required>
+                    <option value="X-Ray">X-Ray</option>
+                    <option value="Ultrasound">Ultrasound</option>
+                    <option value="CT">CT</option>
+                    <option value="MRI">MRI</option>
+                </select>
+            </div>
+            <div class="col-md-3"><input type="text" name="body_part" class="form-control" placeholder="Body Part" required></div>
+            <div class="col-md-4"><input type="text" name="clinical_indication" class="form-control" placeholder="Indication"></div>
+            <div class="col-md-2"><button type="submit" class="btn btn-success w-100">Order Imaging</button></div>
+        </form>
+        <table class="table table-sm">
+            <thead><tr><th>Type</th><th>Part</th><th>Status</th><th>Fee</th></tr></thead>
+            <tbody>
+                <?php while($io = $imaging_orders->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo $io['imaging_type']; ?></td>
+                        <td><?php echo $io['body_part']; ?></td>
+                        <td><?php echo $io['status']; ?></td>
+                        <td><?php echo $io['fee']; ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+
+        <h5 class="mt-4">Surgeries/Procedures</h5>
+        <form method="POST" class="row g-2 mb-4">
+            <input type="hidden" name="action" value="add_surgery_order">
+            <div class="col-md-4"><input type="text" name="procedure_name" class="form-control" placeholder="Procedure Name" required></div>
+            <div class="col-md-3"><input type="date" name="scheduled_date" class="form-control" required></div>
+            <div class="col-md-2"><input type="number" name="estimated_duration" class="form-control" placeholder="Duration (min)"></div>
+            <div class="col-md-3"><button type="submit" class="btn btn-success w-100">Schedule Surgery</button></div>
+        </form>
+        <table class="table table-sm">
+            <thead><tr><th>Procedure</th><th>Date</th><th>Status</th><th>Fee</th></tr></thead>
+            <tbody>
+                <?php while($so = $surgery_orders->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo $so['procedure_name']; ?></td>
+                        <td><?php echo $so['scheduled_date']; ?></td>
+                        <td><?php echo $so['status']; ?></td>
+                        <td><?php echo $so['fee']; ?></td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>

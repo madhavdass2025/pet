@@ -13,7 +13,8 @@ INSERT INTO users (username, password, full_name, role) VALUES
 -- Fee Master
 INSERT INTO fee_master (fee_type, fee_amount, effective_from) VALUES
 ('registration', 500.00, CURDATE()),
-('consultation', 300.00, CURDATE());
+('consultation', 300.00, CURDATE()),
+('vaccination', 250.00, CURDATE());
 
 -- Vaccination Master
 INSERT INTO vaccination_master (vacc_name, pet_type, dosage_number, days_interval, min_age_days) VALUES

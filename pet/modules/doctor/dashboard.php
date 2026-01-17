@@ -6,22 +6,50 @@ include '../../includes/header.php';
 
 $doctor_id = $_SESSION['user_id'];
 $today = date('Y-m-d');
+$status_filter = $_GET['status'] ?? '';
 
-$stmt = $mysqli->prepare("
+$query = "
     SELECT c.*, p.petnam, p.Pettyp, p.ownnam
     FROM consultations c
     JOIN pet_registration p ON c.RegNo = p.RegNo
     WHERE c.doctor_id = ? AND DATE(c.consult_date) = ?
-    ORDER BY c.consult_id ASC
-");
-$stmt->bind_param("is", $doctor_id, $today);
+";
+
+if ($status_filter) {
+    $query .= " AND c.status = ?";
+}
+$query .= " ORDER BY c.consult_id ASC";
+
+$stmt = $mysqli->prepare($query);
+if ($status_filter) {
+    $stmt->bind_param("iss", $doctor_id, $today, $status_filter);
+} else {
+    $stmt->bind_param("is", $doctor_id, $today);
+}
 $stmt->execute();
 $appointments = $stmt->get_result();
 ?>
 
-<h2>Doctor Dashboard - Today's Appointments</h2>
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Doctor Dashboard - Today's Appointments</h2>
+    <form action="search.php" method="GET" class="d-flex">
+        <input type="text" name="q" class="form-control me-2" placeholder="Search Patient/RegNo">
+        <button type="submit" class="btn btn-outline-primary">Search</button>
+    </form>
+</div>
 
-<div class="card mt-4">
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="btn-group" role="group">
+            <a href="dashboard.php" class="btn btn-outline-secondary <?php echo !$status_filter ? 'active' : ''; ?>">All</a>
+            <a href="dashboard.php?status=scheduled" class="btn btn-outline-primary <?php echo $status_filter == 'scheduled' ? 'active' : ''; ?>">Scheduled</a>
+            <a href="dashboard.php?status=in-progress" class="btn btn-outline-warning <?php echo $status_filter == 'in-progress' ? 'active' : ''; ?>">In Progress</a>
+            <a href="dashboard.php?status=completed" class="btn btn-outline-success <?php echo $status_filter == 'completed' ? 'active' : ''; ?>">Completed</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
     <div class="card-body">
         <table class="table table-hover">
             <thead>
