@@ -31,6 +31,7 @@ CREATE TABLE vaccination_master (
   dosage_number INT NOT NULL,
   days_interval INT NOT NULL, -- Days between doses
   min_age_days INT,
+  med_id INT, -- Link to inventory for stock tracking
   description TEXT,
   is_active BOOLEAN DEFAULT TRUE
 );
@@ -439,12 +440,74 @@ CREATE TABLE additional_service_charges (
   charge_id INT PRIMARY KEY AUTO_INCREMENT,
   consult_id INT NOT NULL,
   charge_type VARCHAR(100) NOT NULL, -- Nursing, Disposable, Assistant, etc.
+  med_id INT, -- Optional link to inventory for stock deduction (disposables/injections)
+  quantity INT DEFAULT 1,
   description TEXT,
   amount DECIMAL(10,2) NOT NULL,
   recorded_by INT,
   recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (consult_id) REFERENCES consultations(consult_id),
-  FOREIGN KEY (recorded_by) REFERENCES users(user_id)
+  FOREIGN KEY (recorded_by) REFERENCES users(user_id),
+  FOREIGN KEY (med_id) REFERENCES medicine_master(med_id)
+);
+
+-- Supplier Management
+CREATE TABLE suppliers (
+  supplier_id INT PRIMARY KEY AUTO_INCREMENT,
+  supplier_name VARCHAR(200) NOT NULL,
+  contact_person VARCHAR(100),
+  phone VARCHAR(20),
+  email VARCHAR(100),
+  address TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Purchase Orders
+CREATE TABLE purchase_orders (
+  po_id INT PRIMARY KEY AUTO_INCREMENT,
+  supplier_id INT,
+  order_date DATE NOT NULL,
+  total_amount DECIMAL(10,2),
+  status VARCHAR(50) DEFAULT 'ordered', -- ordered, received, cancelled
+  created_by INT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE purchase_items (
+  item_id INT PRIMARY KEY AUTO_INCREMENT,
+  po_id INT,
+  med_id INT,
+  quantity INT,
+  unit_cost DECIMAL(10,2),
+  expiry_date DATE,
+  FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id),
+  FOREIGN KEY (med_id) REFERENCES medicine_master(med_id)
+);
+
+-- Returns
+CREATE TABLE purchase_returns (
+  return_id INT PRIMARY KEY AUTO_INCREMENT,
+  po_id INT,
+  return_date DATE NOT NULL,
+  reason TEXT,
+  total_refund DECIMAL(10,2),
+  created_by INT,
+  FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE sales_returns (
+  return_id INT PRIMARY KEY AUTO_INCREMENT,
+  payment_id INT,
+  return_date DATE NOT NULL,
+  reason TEXT,
+  total_refund DECIMAL(10,2),
+  created_by INT,
+  FOREIGN KEY (payment_id) REFERENCES payment_transactions(payment_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 -- Audit Trail

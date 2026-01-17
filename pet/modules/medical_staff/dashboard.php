@@ -167,12 +167,27 @@ $pending_vaccines = $mysqli->query("
                 </select>
             </div>
             <div class="mb-3">
+                <label class="form-label">Linked Item (optional, for stock deduction)</label>
+                <select name="med_id" class="form-select" onchange="updatePrice(this)">
+                    <option value="">-- No linked item --</option>
+                    <?php
+                    $items = $mysqli->query("SELECT med_id, med_name, unit_price FROM medicine_master WHERE is_active = 1");
+                    while($it = $items->fetch_assoc()): ?>
+                        <option value="<?php echo $it['med_id']; ?>" data-price="<?php echo $it['unit_price']; ?>"><?php echo $it['med_name']; ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="number" name="quantity" class="form-control" value="1" min="1">
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Description</label>
                 <input type="text" name="description" class="form-control" placeholder="e.g. IV set, Nursing care">
             </div>
             <div class="mb-3">
                 <label class="form-label">Amount</label>
-                <input type="number" step="0.01" name="amount" class="form-control" required>
+                <input type="number" step="0.01" name="amount" id="charge_amount" class="form-control" required>
             </div>
         </div>
         <div class="modal-footer"><button type="submit" class="btn btn-primary">Save Charge</button></div>
@@ -180,5 +195,15 @@ $pending_vaccines = $mysqli->query("
     </div>
   </div>
 </div>
+
+<script>
+function updatePrice(select) {
+    let option = select.options[select.selectedIndex];
+    let price = option.getAttribute('data-price');
+    if (price) {
+        document.getElementById('charge_amount').value = price;
+    }
+}
+</script>
 
 <?php include '../../includes/footer.php'; ?>

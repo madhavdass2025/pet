@@ -35,4 +35,14 @@ INSERT INTO lab_test_master (cat_id, test_name, test_code, fee) VALUES
 -- Medicine Master
 INSERT INTO medicine_master (med_name, med_category, dosage_form, strength, unit_price, stock_qty, reorder_level) VALUES
 ('Amoxicillin', 'Antibiotic', 'Tablet', '250mg', 10.00, 100, 20),
-('Meloxicam', 'NSAID', 'Syrup', '1.5mg/ml', 50.00, 50, 10);
+('Meloxicam', 'NSAID', 'Syrup', '1.5mg/ml', 50.00, 50, 10),
+('IV Set', 'Disposable', 'Set', '', 150.00, 50, 10),
+('DHPP Vaccine', 'Vaccine', 'Injection', '', 250.00, 30, 5);
+
+-- Link Vaccine Master to Inventory
+UPDATE vaccination_master SET med_id = (SELECT med_id FROM medicine_master WHERE med_name = 'DHPP Vaccine') WHERE vacc_name = 'DHPP';
+
+-- Suppliers
+INSERT INTO suppliers (supplier_name, contact_person, phone, email) VALUES
+('VetPharma Ltd', 'Alice Green', '555-0199', 'alice@vetpharma.com'),
+('Animal Care Supplies', 'Bob Brown', '555-0200', 'bob@acs.com');

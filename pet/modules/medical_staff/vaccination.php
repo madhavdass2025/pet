@@ -7,7 +7,7 @@ $order_id = $_GET['order_id'] ?? '';
 if (!$order_id) { header("Location: dashboard.php"); exit(); }
 
 $stmt = $mysqli->prepare("
-    SELECT vo.*, pr.petnam, vm.days_interval
+    SELECT vo.*, pr.petnam, vm.days_interval, vm.med_id
     FROM vaccination_orders vo
     JOIN pet_registration pr ON vo.RegNo = pr.RegNo
     JOIN vaccination_master vm ON vo.vacc_id = vm.vacc_id
@@ -38,6 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_hist = $mysqli->prepare("INSERT INTO vaccination_history (RegNo, vacc_order_id, vacc_name, administered_date, next_due_date, batch_number, injection_site, administered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_hist->bind_param("sisssssi", $order['RegNo'], $order_id, $order['vaccine_name'], $admin_date, $next_due, $batch, $site, $_SESSION['user_id']);
         $stmt_hist->execute();
+
+        // Update Stock if linked to inventory
+        if ($order['med_id']) {
+            $stmt_stock = $mysqli->prepare("UPDATE medicine_master SET stock_qty = stock_qty - 1 WHERE med_id = ?");
+            $stmt_stock->bind_param("i", $order['med_id']);
+            $stmt_stock->execute();
+        }
 
         $mysqli->commit();
         header("Location: dashboard.php");
