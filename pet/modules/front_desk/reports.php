@@ -5,7 +5,7 @@ checkRole(['Front Desk', 'Accountant', 'Admin']);
 include '../../includes/header.php';
 
 $today = date('Y-m-d');
-$report = $mysqli->query("
+$stmt_rep = $mysqli->prepare("
     SELECT
         DATE(transaction_date) as t_date,
         COUNT(payment_id) as total_transactions,
@@ -15,9 +15,12 @@ $report = $mysqli->query("
         SUM(credit_amount) as total_credit,
         SUM(total_amount) as grand_total
     FROM payment_transactions
-    WHERE DATE(transaction_date) = '$today'
+    WHERE DATE(transaction_date) = ?
     GROUP BY DATE(transaction_date)
-")->fetch_assoc();
+");
+$stmt_rep->bind_param("s", $today);
+$stmt_rep->execute();
+$report = $stmt_rep->get_result()->fetch_assoc();
 
 $credits = $mysqli->query("
     SELECT ct.*, pr.petnam, pr.ownnam, pr.ownmob

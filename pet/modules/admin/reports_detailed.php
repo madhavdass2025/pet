@@ -12,7 +12,7 @@ $rev_stmt->execute();
 $monthly_rev = $rev_stmt->get_result()->fetch_assoc()['rev'] ?: 0;
 
 // 2. Service-wise Breakdown
-$services = $mysqli->query("
+$stmt_svc = $mysqli->prepare("
     SELECT
         SUM(registration_fee) as reg,
         SUM(consultation_fee) as cons,
@@ -23,17 +23,23 @@ $services = $mysqli->query("
         SUM(surgery_charges) as surg,
         SUM(other_charges) as other
     FROM payment_transactions
-    WHERE DATE_FORMAT(transaction_date, '%Y-%m') = '$month'
-")->fetch_assoc();
+    WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?
+");
+$stmt_svc->bind_param("s", $month);
+$stmt_svc->execute();
+$services = $stmt_svc->get_result()->fetch_assoc();
 
 // 3. Doctor-wise stats
-$doc_stats = $mysqli->query("
+$stmt_doc = $mysqli->prepare("
     SELECT u.full_name, COUNT(c.consult_id) as count, SUM(c.consultation_fee) as total_fees
     FROM users u
-    LEFT JOIN consultations c ON u.user_id = c.doctor_id AND DATE_FORMAT(c.consult_date, '%Y-%m') = '$month'
+    LEFT JOIN consultations c ON u.user_id = c.doctor_id AND DATE_FORMAT(c.consult_date, '%Y-%m') = ?
     WHERE u.role = 'Doctor'
     GROUP BY u.user_id
 ");
+$stmt_doc->bind_param("s", $month);
+$stmt_doc->execute();
+$doc_stats = $stmt_doc->get_result();
 
 // 4. Low Stock Alert
 $low_stock = $mysqli->query("SELECT * FROM medicine_master WHERE stock_qty <= reorder_level AND is_active = 1");

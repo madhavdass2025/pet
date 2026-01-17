@@ -4,11 +4,11 @@ USE pet_clinic;
 
 -- Default Users (password is 'password123')
 INSERT INTO users (username, password, full_name, role) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System Admin', 'Admin'),
-('frontdesk', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Receptionist', 'Front Desk'),
-('doctor1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Dr. Smith', 'Doctor'),
-('staff1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nurse Jane', 'Medical Staff'),
-('accountant1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Doe', 'Accountant');
+('admin', '$2b$12$dadFyDyu7CrMIidYFdbW9OjO.C7pPJ91QS7asblDI7WupZOD544uG', 'System Admin', 'Admin'),
+('frontdesk', '$2b$12$dadFyDyu7CrMIidYFdbW9OjO.C7pPJ91QS7asblDI7WupZOD544uG', 'Receptionist', 'Front Desk'),
+('doctor1', '$2b$12$dadFyDyu7CrMIidYFdbW9OjO.C7pPJ91QS7asblDI7WupZOD544uG', 'Dr. Smith', 'Doctor'),
+('staff1', '$2b$12$dadFyDyu7CrMIidYFdbW9OjO.C7pPJ91QS7asblDI7WupZOD544uG', 'Nurse Jane', 'Medical Staff'),
+('accountant1', '$2b$12$dadFyDyu7CrMIidYFdbW9OjO.C7pPJ91QS7asblDI7WupZOD544uG', 'John Doe', 'Accountant');
 
 -- Fee Master
 INSERT INTO fee_master (fee_type, fee_amount, effective_from) VALUES

@@ -19,16 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['role'] = $user['role'];
 
             // Log activity (audit trail)
-            $stmt_log = $mysqli->prepare("INSERT INTO audit_log (user_id, action) VALUES (?, 'Logged in')");
-            $stmt_log->bind_param("i", $user['user_id']);
-            $stmt_log->execute();
+            logActivity($mysqli, 'Logged in');
 
             redirectByRole($user['role']);
         } else {
-            header("Location: index.php?error=Invalid password");
+            header("Location: index.php?error=Invalid password. Please try again.");
         }
     } else {
-        header("Location: index.php?error=User not found");
+        header("Location: index.php?error=User '" . htmlspecialchars($username) . "' not found or inactive.");
     }
     exit();
 }

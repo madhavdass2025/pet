@@ -20,7 +20,7 @@ function checkRole($roles) {
 function logActivity($mysqli, $action, $table_name = null, $record_id = null, $old_val = null, $new_val = null) {
     $user_id = $_SESSION['user_id'] ?? null;
     $stmt = $mysqli->prepare("INSERT INTO audit_log (user_id, action, table_name, record_id, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("isssss", $user_id, $action, $table_name, $record_id, $old_val, $new_val);
+    $stmt->bind_param("ississ", $user_id, $action, $table_name, $record_id, $old_val, $new_val);
     $stmt->execute();
 }
 
