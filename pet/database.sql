@@ -308,6 +308,7 @@ CREATE TABLE vaccination_orders (
   administered_date DATE,
   next_due_date DATE,
   batch_number VARCHAR(50),
+  injection_site VARCHAR(100),
   fee DECIMAL(10,2),
   payment_status VARCHAR(50) DEFAULT 'pending',
 
@@ -423,6 +424,7 @@ CREATE TABLE vaccination_history (
   administered_date DATE NOT NULL,
   next_due_date DATE,
   batch_number VARCHAR(50),
+  injection_site VARCHAR(100),
   administered_by INT,
 
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -430,6 +432,19 @@ CREATE TABLE vaccination_history (
   FOREIGN KEY (RegNo) REFERENCES pet_registration(RegNo),
   FOREIGN KEY (vacc_order_id) REFERENCES vaccination_orders(vacc_order_id),
   FOREIGN KEY (administered_by) REFERENCES users(user_id)
+);
+
+-- Additional Service Charges
+CREATE TABLE additional_service_charges (
+  charge_id INT PRIMARY KEY AUTO_INCREMENT,
+  consult_id INT NOT NULL,
+  charge_type VARCHAR(100) NOT NULL, -- Nursing, Disposable, Assistant, etc.
+  description TEXT,
+  amount DECIMAL(10,2) NOT NULL,
+  recorded_by INT,
+  recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (consult_id) REFERENCES consultations(consult_id),
+  FOREIGN KEY (recorded_by) REFERENCES users(user_id)
 );
 
 -- Audit Trail

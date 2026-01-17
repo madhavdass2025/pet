@@ -29,9 +29,9 @@ include '../../includes/header.php';
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="card-title">Lab Master</h5>
-                <p class="card-text">Configure lab tests and parameters.</p>
-                <a href="#" class="btn btn-info">Manage</a>
+                <h5 class="card-title">Vaccination Master</h5>
+                <p class="card-text">Manage vaccines and intervals.</p>
+                <a href="vaccination_master.php" class="btn btn-info">Manage</a>
             </div>
         </div>
     </div>

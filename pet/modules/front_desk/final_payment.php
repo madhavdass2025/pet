@@ -42,7 +42,12 @@ $stmt_surg->bind_param("i", $consult_id);
 $stmt_surg->execute();
 $surg_charges = $stmt_surg->get_result()->fetch_assoc()['total'] ?: 0;
 
-$total_due = $med_charges + $lab_charges + $vacc_charges + $imag_charges + $surg_charges;
+$stmt_add = $mysqli->prepare("SELECT SUM(amount) as total FROM additional_service_charges WHERE consult_id = ?");
+$stmt_add->bind_param("i", $consult_id);
+$stmt_add->execute();
+$additional_charges = $stmt_add->get_result()->fetch_assoc()['total'] ?: 0;
+
+$total_due = $med_charges + $lab_charges + $vacc_charges + $imag_charges + $surg_charges + $additional_charges;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $mysqli->begin_transaction();
@@ -58,11 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $receipt_count = $res_receipt->fetch_assoc()['cnt'] + 1;
         $receipt_no = "REC-" . date('Ymd') . "-" . str_pad($receipt_count, 4, '0', STR_PAD_LEFT);
 
-        $stmt_pay = $mysqli->prepare("INSERT INTO payment_transactions (RegNo, consult_id, transaction_date, receipt_no, medicine_charges, lab_charges, vaccination_charges, xray_charges, surgery_charges, subtotal, total_amount, cash_amount, card_amount, upi_amount, credit_amount, paid_amount, balance_amount, collected_by) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_pay = $mysqli->prepare("INSERT INTO payment_transactions (RegNo, consult_id, transaction_date, receipt_no, medicine_charges, lab_charges, vaccination_charges, xray_charges, surgery_charges, other_charges, subtotal, total_amount, cash_amount, card_amount, upi_amount, credit_amount, paid_amount, balance_amount, collected_by) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $balance = $total_due - $paid_amount;
         $stmt_pay->bind_param("sisddddddddddddddi",
-            $reg_no, $consult_id, $receipt_no, $med_charges, $lab_charges, $vacc_charges, $imag_charges, $surg_charges, $total_due, $total_due,
+            $reg_no, $consult_id, $receipt_no, $med_charges, $lab_charges, $vacc_charges, $imag_charges, $surg_charges, $additional_charges, $total_due, $total_due,
             $cash, $card, $upi, $credit, $paid_amount, $balance, $_SESSION['user_id']
         );
         $stmt_pay->execute();
@@ -107,6 +112,7 @@ include '../../includes/header.php';
                         <tr><td>Vaccination Charges</td><td><?php echo number_format($vacc_charges, 2); ?></td></tr>
                         <tr><td>Imaging Charges</td><td><?php echo number_format($imag_charges, 2); ?></td></tr>
                         <tr><td>Surgery Charges</td><td><?php echo number_format($surg_charges, 2); ?></td></tr>
+                        <tr><td>Additional Charges</td><td><?php echo number_format($additional_charges, 2); ?></td></tr>
                         <tr class="table-dark"><td>Total Due</td><td><?php echo number_format($total_due, 2); ?></td></tr>
                     </table>
                 </div>

@@ -17,20 +17,26 @@ $stmt->bind_param("i", $order_id);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
 
+if ($order['payment_status'] != 'paid') {
+    echo "Error: Cannot administer vaccine for unpaid orders.";
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $batch = $_POST['batch_number'];
     $admin_date = $_POST['administered_date'];
+    $site = $_POST['injection_site'];
 
     $next_due = date('Y-m-d', strtotime($admin_date . ' + ' . $order['days_interval'] . ' days'));
 
     $mysqli->begin_transaction();
     try {
-        $stmt_up = $mysqli->prepare("UPDATE vaccination_orders SET administered = 1, administered_date = ?, next_due_date = ?, batch_number = ?, administered_by = ? WHERE vacc_order_id = ?");
-        $stmt_up->bind_param("ssssi", $admin_date, $next_due, $batch, $_SESSION['user_id'], $order_id);
+        $stmt_up = $mysqli->prepare("UPDATE vaccination_orders SET administered = 1, administered_date = ?, next_due_date = ?, batch_number = ?, injection_site = ?, administered_by = ? WHERE vacc_order_id = ?");
+        $stmt_up->bind_param("sssssi", $admin_date, $next_due, $batch, $site, $_SESSION['user_id'], $order_id);
         $stmt_up->execute();
 
-        $stmt_hist = $mysqli->prepare("INSERT INTO vaccination_history (RegNo, vacc_order_id, vacc_name, administered_date, next_due_date, batch_number, administered_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt_hist->bind_param("sissssi", $order['RegNo'], $order_id, $order['vaccine_name'], $admin_date, $next_due, $batch, $_SESSION['user_id']);
+        $stmt_hist = $mysqli->prepare("INSERT INTO vaccination_history (RegNo, vacc_order_id, vacc_name, administered_date, next_due_date, batch_number, injection_site, administered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_hist->bind_param("sisssssi", $order['RegNo'], $order_id, $order['vaccine_name'], $admin_date, $next_due, $batch, $site, $_SESSION['user_id']);
         $stmt_hist->execute();
 
         $mysqli->commit();
@@ -57,6 +63,10 @@ include '../../includes/header.php';
         <div class="col-md-6">
             <label class="form-label">Batch Number</label>
             <input type="text" name="batch_number" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Injection Site</label>
+            <input type="text" name="injection_site" class="form-control" placeholder="e.g. Left shoulder">
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">Record Administration</button>

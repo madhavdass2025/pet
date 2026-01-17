@@ -16,6 +16,11 @@ $stmt->bind_param("i", $order_id);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
 
+if ($order['payment_status'] != 'paid') {
+    echo "Error: Cannot enter results for unpaid lab tests.";
+    exit();
+}
+
 // Fetch parameters for this test
 $stmt_param = $mysqli->prepare("SELECT * FROM lab_parameters WHERE test_id = ?");
 $stmt_param->bind_param("i", $order['test_id']);
@@ -60,11 +65,12 @@ include '../../includes/header.php';
         <tbody>
             <?php if ($params->num_rows > 0): ?>
                 <?php while($p = $params->fetch_assoc()): ?>
-                    <tr>
+                    <tr id="row_<?php echo $p['param_id']; ?>">
                         <td><?php echo $p['parameter_name']; ?></td>
                         <td>
                             <input type="hidden" name="param_id[]" value="<?php echo $p['param_id']; ?>">
-                            <input type="number" step="0.0001" name="value[]" class="form-control" required>
+                            <input type="number" step="0.0001" name="value[]" class="form-control"
+                                   onchange="checkAbnormal(this, <?php echo $p['min_value'] ?: 'null'; ?>, <?php echo $p['max_value'] ?: 'null'; ?>)" required>
                         </td>
                         <td><?php echo $p['unit']; ?></td>
                         <td><?php echo $p['min_value'] . ' - ' . $p['max_value']; ?></td>
@@ -84,5 +90,17 @@ include '../../includes/header.php';
     <button type="submit" class="btn btn-primary">Submit Results</button>
     <a href="dashboard.php" class="btn btn-secondary">Back</a>
 </form>
+
+<script>
+function checkAbnormal(input, min, max) {
+    let val = parseFloat(input.value);
+    let row = input.closest('tr');
+    if ((min !== null && val < min) || (max !== null && val > max)) {
+        row.classList.add('table-danger');
+    } else {
+        row.classList.remove('table-danger');
+    }
+}
+</script>
 
 <?php include '../../includes/footer.php'; ?>

@@ -100,6 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_so = $mysqli->prepare("INSERT INTO surgery_orders (consult_id, RegNo, procedure_name, scheduled_date, estimated_duration, anesthesia_required, fee, ordered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_so->bind_param("isssiddi", $consult_id, $data['RegNo'], $name, $date, $duration, $anesthesia, $fee, $_SESSION['user_id']);
         $stmt_so->execute();
+    } elseif ($action == 'remove_prescription') {
+        $pid = $_POST['prescription_id'];
+        $stmt_rem = $mysqli->prepare("DELETE FROM prescriptions WHERE prescription_id = ? AND consult_id = ?");
+        $stmt_rem->bind_param("ii", $pid, $consult_id);
+        $stmt_rem->execute();
+    } elseif ($action == 'remove_lab_order') {
+        $oid = $_POST['order_id'];
+        $stmt_rem = $mysqli->prepare("DELETE FROM lab_orders WHERE order_id = ? AND consult_id = ?");
+        $stmt_rem->bind_param("ii", $oid, $consult_id);
+        $stmt_rem->execute();
     } elseif ($action == 'complete_consultation') {
         $stmt_comp = $mysqli->prepare("UPDATE consultations SET status = 'completed' WHERE consult_id = ?");
         $stmt_comp->bind_param("i", $consult_id);
@@ -263,7 +273,13 @@ include '../../includes/header.php';
                         <td><?php echo $p['dosage']; ?></td>
                         <td><?php echo $p['frequency']; ?></td>
                         <td><?php echo $p['duration']; ?></td>
-                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="remove_prescription">
+                                <input type="hidden" name="prescription_id" value="<?php echo $p['prescription_id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this medicine?')">Remove</button>
+                            </form>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
@@ -293,6 +309,13 @@ include '../../includes/header.php';
                         <td><?php echo $lo['test_name']; ?></td>
                         <td><?php echo $lo['test_status']; ?></td>
                         <td><?php echo $lo['test_fee']; ?></td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="remove_lab_order">
+                                <input type="hidden" name="order_id" value="<?php echo $lo['order_id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this test?')">Remove</button>
+                            </form>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
